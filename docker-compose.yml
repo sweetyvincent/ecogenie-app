@@ -1,0 +1,123 @@
+# ================================================
+# ECOGENIE - Docker Compose
+# Full production stack orchestration
+# ================================================
+
+version: '3.9'
+
+services:
+  # ─────────────────────────────────────────────
+  # Frontend - Nginx serving static files
+  # ─────────────────────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ecogenie-frontend
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    restart: unless-stopped
+    networks:
+      - ecogenie-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  # ─────────────────────────────────────────────
+  # Backend - FastAPI Python Application
+  # ─────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ecogenie-backend
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER:-ecogenie}:${DB_PASSWORD:-ecogenie_pass}@database:5432/${DB_NAME:-ecogenie_db}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - JWT_SECRET=${JWT_SECRET:-super-secret-key-change-in-production}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:8080}
+      - REDIS_URL=redis://redis:6379/0
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET:-ecogenie-uploads}
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - ecogenie-network
+    volumes:
+      - ./backend:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ─────────────────────────────────────────────
+  # Database - PostgreSQL
+  # ─────────────────────────────────────────────
+  database:
+    image: postgres:16-alpine
+    container_name: ecogenie-database
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    environment:
+      - POSTGRES_USER=${DB_USER:-ecogenie}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-ecogenie_pass}
+      - POSTGRES_DB=${DB_NAME:-ecogenie_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+    networks:
+      - ecogenie-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-ecogenie} -d ${DB_NAME:-ecogenie_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─────────────────────────────────────────────
+  # Redis - Caching & Session Store
+  # ─────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: ecogenie-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - ecogenie-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+
+# ─────────────────────────────────────────────
+# Volumes
+# ─────────────────────────────────────────────
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+# ─────────────────────────────────────────────
+# Networks
+# ─────────────────────────────────────────────
+networks:
+  ecogenie-network:
+    driver: bridge
+    name: ecogenie-network

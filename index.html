@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ECOGENIE – Your Personal Carbon Reduction Assistant</title>
+  
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="ECOGENIE is an AI-powered personal carbon reduction assistant that helps individuals track, analyze, and reduce their carbon footprint through gamification, personalized recommendations, and community challenges.">
+  <meta name="keywords" content="sustainability, carbon footprint, tracking, eco coach, eco-friendly, carbon calculator, climate change, green actions">
+  <meta name="author" content="EcoGenie Technologies">
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%25230d9488'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z'/%3E%3C/svg%3E">
+
+  <!-- Design System CSS -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <div class="app-wrapper">
+    
+    <!-- Mobile Menu Toggle -->
+    <button class="menu-toggle" aria-label="Toggle Menu">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
+    </button>
+    
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+        </div>
+        <div class="logo-text">EcoGenie</div>
+      </div>
+      
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">Core Features</div>
+        
+        <div class="nav-item active" data-page="dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="9"></rect>
+            <rect x="14" y="3" width="7" height="5"></rect>
+            <rect x="14" y="12" width="7" height="9"></rect>
+            <rect x="3" y="16" width="7" height="5"></rect>
+          </svg>
+          <span class="nav-label">Dashboard</span>
+        </div>
+        
+        <div class="nav-item" data-page="analytics">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 20V10"></path>
+            <path d="M12 20V4"></path>
+            <path d="M6 20v-6"></path>
+          </svg>
+          <span class="nav-label">Analytics</span>
+        </div>
+        
+        <div class="nav-item" data-page="chat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          </svg>
+          <span class="nav-label">CarbonGPT Coach</span>
+        </div>
+        
+        <div class="nav-item" data-page="simulator">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+            <polyline points="2 17 12 22 22 17"></polyline>
+            <polyline points="2 12 12 17 22 12"></polyline>
+          </svg>
+          <span class="nav-label">Simulator</span>
+        </div>
+        
+        <div class="nav-section-title">Growth & Community</div>
+        
+        <div class="nav-item" data-page="challenges">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+          </svg>
+          <span class="nav-label">Challenges</span>
+        </div>
+        
+        <div class="nav-item" data-page="community">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+          <span class="nav-label">Community</span>
+        </div>
+        
+        <div class="nav-item" data-page="rewards">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 12 20 22 4 22 4 12"></polyline>
+            <rect x="2" y="7" width="20" height="5"></rect>
+            <line x1="12" y1="22" x2="12" y2="7"></line>
+            <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path>
+            <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path>
+          </svg>
+          <span class="nav-label">Rewards</span>
+        </div>
+        
+        <div class="nav-item" data-page="settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+          <span class="nav-label">Settings</span>
+        </div>
+      </nav>
+      
+      <!-- User profile in sidebar footer -->
+      <div class="sidebar-footer">
+        <div class="sidebar-user" onclick="App.navigate('settings')">
+          <div class="user-avatar">EE</div>
+          <div class="user-info">
+            <div class="user-name">Eco Explorer</div>
+            <div class="user-level">Level 1 · Eco Seed</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+    
+    <!-- Mobile Sidebar overlay -->
+    <div class="sidebar-overlay"></div>
+    
+    <!-- Main content rendering target -->
+    <main class="main-content">
+      <div id="app"></div>
+    </main>
+    
+    <!-- Mobile Bottom Navigation -->
+    <div class="bottom-nav">
+      <div class="bottom-nav-items">
+        <div class="bottom-nav-item active" data-page="dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="9"></rect>
+            <rect x="14" y="3" width="7" height="5"></rect>
+            <rect x="14" y="12" width="7" height="9"></rect>
+            <rect x="3" y="16" width="7" height="5"></rect>
+          </svg>
+          <span>Dash</span>
+        </div>
+        
+        <div class="bottom-nav-item" data-page="analytics">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 20V10"></path>
+            <path d="M12 20V4"></path>
+            <path d="M6 20v-6"></path>
+          </svg>
+          <span>Charts</span>
+        </div>
+        
+        <div class="bottom-nav-item" data-page="chat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          </svg>
+          <span>Coach</span>
+        </div>
+        
+        <div class="bottom-nav-item" data-page="simulator">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+            <polyline points="2 17 12 22 22 17"></polyline>
+            <polyline points="2 12 12 17 22 12"></polyline>
+          </svg>
+          <span>Sim</span>
+        </div>
+        
+        <div class="bottom-nav-item" data-page="community">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+          </svg>
+          <span>Social</span>
+        </div>
+      </div>
+    </div>
+    
+  </div>
+
+  <!-- Toast Notification Overlay -->
+  <div id="toast-container" class="toast-container"></div>
+  
+  <!-- Modal Overlay -->
+  <div id="modal-overlay" class="modal-overlay"></div>
+
+  <!-- JavaScript Modules (Loaded sequentially) -->
+  <script src="js/data.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/carbon-calculator.js"></script>
+  <script src="js/ai-coach.js"></script>
+  <script src="js/simulator.js"></script>
+  <script src="js/gamification.js"></script>
+  <script src="js/community.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>
