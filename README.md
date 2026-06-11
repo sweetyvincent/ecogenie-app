@@ -208,14 +208,14 @@ H --> A
 - JavaScript
 - Responsive Design
 
-### Backend (Planned)
+### Backend
 
 - Python
-- FastAPI
+- FastAPI (REST API Services, AI recommendations, OCR calculations, and CarbonGPT)
 
 ### Database
 
-- PostgreSQL
+- PostgreSQL (Relational schema with custom aggregation views)
 
 ### Artificial Intelligence
 
@@ -272,6 +272,23 @@ index.html
 ```
 
 Or use VS Code Live Server for development.
+
+### Running Tests
+
+#### Frontend Unit Tests
+To run the carbon calculator core engine unit tests:
+```bash
+npm install
+npm test
+```
+
+#### Backend Unit Tests
+To run the FastAPI backend API unit tests:
+```bash
+cd backend
+pip install -r requirements.txt
+python -m pytest test_main.py
+```
 
 ---
 

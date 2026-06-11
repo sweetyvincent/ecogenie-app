@@ -372,3 +372,7 @@ const EcoData = {
     { id: 'g6', name: 'Eco Parents', icon: '👨‍👩‍👧', members: 3100, description: 'Raising the next generation of eco-warriors' }
   ]
 };
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = EcoData;
+}

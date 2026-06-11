@@ -1,0 +1,27 @@
+{
+  "name": "ecogenie",
+  "version": "1.0.0",
+  "description": "ECOGENIE – Your Personal Carbon Reduction Assistant",
+  "main": "index.html",
+  "scripts": {
+    "test": "jest",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint js/**/*.js",
+    "lint:fix": "eslint js/**/*.js --fix"
+  },
+  "keywords": [
+    "sustainability",
+    "carbon",
+    "footprint",
+    "tracker"
+  ],
+  "author": "EcoGenie Team",
+  "license": "MIT",
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.4.2",
+    "eslint": "^8.57.0",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "jsdom": "^24.0.0"
+  }
+}

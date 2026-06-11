@@ -3,6 +3,10 @@
    Comprehensive emission calculation functions
    ============================================================ */
 
+if (typeof EcoData === 'undefined' && typeof require !== 'undefined') {
+  global.EcoData = require('./data.js');
+}
+
 const CarbonCalculator = (() => {
   const factors = EcoData.emissionFactors;
   const averages = EcoData.averages;
@@ -291,3 +295,7 @@ const CarbonCalculator = (() => {
     generateSampleData
   };
 })();
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = CarbonCalculator;
+}

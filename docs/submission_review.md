@@ -99,7 +99,7 @@ We optimized resource consumption across the client, backend compute cycles, and
 EcoGenie provides automated and mathematical testing verification structures.
 
 ### 4.1 Automated Validation Pipelines
-*   **CI/CD Pipeline**: The GitHub Action [.github/workflows/ci-cd.yml](file:///c:/Users/Lenovo/Desktop/Carbon%20Footprints/_github/workflows/ci-cd.yml) automatically runs validation pipelines on every commit:
+*   **CI/CD Pipeline**: The GitHub Action [.github/workflows/ci-cd.yml](file:///c:/Users/Lenovo/Desktop/Carbon%20Footprints/.github/workflows/ci-cd.yml) automatically runs validation pipelines on every commit:
     1.  **HTML/CSS Validation**: Lints layout files for syntax errors.
     2.  **JavaScript Linters**: ESLint validates modular JS integrity.
     3.  **Unit Tests**: Standardized testing execution configurations (Jest) check calculating functions.
@@ -136,5 +136,5 @@ Accessibility was integrated into the UX design system, ensuring users of all ab
 | **Code Quality** | Modular JS files, clean API routes, SQL Models | **✅ Pass** | `js/`, `backend/models.py` |
 | **Security** | SQLAlchemy parameterized parameters, `.env` protection | **✅ Pass** | `backend/main.py`, `.env.example` |
 | **Efficiency** | Vanilla SPA, Database Views, custom SVGs | **✅ Pass** | `js/charts.js`, `backend/db/init.sql` |
-| **Testing** | CI/CD automation pipelines, unit calculations | **✅ Pass** | `_github/workflows/ci-cd.yml` |
+| **Testing** | CI/CD automation pipelines, unit calculations | **✅ Pass** | `.github/workflows/ci-cd.yml` |
 | **Accessibility** | Semantic elements, WCAG AAA text contrast, explicit labels | **✅ Pass** | `index.html`, `css/style.css` |
