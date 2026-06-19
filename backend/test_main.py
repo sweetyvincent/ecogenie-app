@@ -37,7 +37,8 @@ def test_register_and_login():
     response = client.post("/api/auth/login", json=login_payload)
     assert response.status_code == 200
     login_data = response.json()
-    assert login_data["email"] == user_email
+    assert "access_token" in login_data
+    assert login_data["token_type"] == "bearer"
 
 def test_onboarding():
     # Register first
@@ -157,3 +158,85 @@ def test_chat_sustainability_coach():
     assert response.status_code == 200
     data = response.json()
     assert "CarbonGPT" in data["response"]
+
+
+def test_register_duplicate_email():
+    """Test that registering with duplicate email returns 400."""
+    user_email = "duplicate@ecogenie.app"
+    payload = {"email": user_email, "name": "Dup User", "password": "password123"}
+    from main import in_memory_users
+    in_memory_users.pop(user_email, None)
+    client.post("/api/auth/register", json=payload)
+    # Try again with same email
+    response = client.post("/api/auth/register", json=payload)
+    assert response.status_code == 400
+    assert "already registered" in response.json()["detail"]
+
+
+def test_login_invalid_email():
+    """Test login with non-existent email returns 401."""
+    payload = {"email": "nonexistent@ecogenie.app", "password": "password123"}
+    response = client.post("/api/auth/login", json=payload)
+    assert response.status_code == 401
+
+
+def test_login_wrong_password():
+    """Test login with wrong password returns 401."""
+    user_email = "wrongpw@ecogenie.app"
+    from main import in_memory_users
+    in_memory_users.pop(user_email, None)
+    client.post("/api/auth/register", json={"email": user_email, "name": "Test", "password": "correct_password"})
+    response = client.post("/api/auth/login", json={"email": user_email, "password": "wrong_password"})
+    assert response.status_code == 401
+
+
+def test_login_returns_token():
+    """Test successful login returns JWT access token."""
+    user_email = "tokenuser@ecogenie.app"
+    from main import in_memory_users
+    in_memory_users.pop(user_email, None)
+    client.post("/api/auth/register", json={"email": user_email, "name": "Token User", "password": "securepass123"})
+    response = client.post("/api/auth/login", json={"email": user_email, "password": "securepass123"})
+    assert response.status_code == 200
+    data = response.json()
+    assert "access_token" in data
+    assert data["token_type"] == "bearer"
+
+
+def test_calculate_footprint_empty():
+    """Test calculation with empty payload uses fallback."""
+    payload = {}
+    response = client.post("/api/carbon/calculate", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["daily"] == 12.4  # Fallback value
+
+
+def test_chat_with_empty_message():
+    """Test chat endpoint with empty message."""
+    payload = {"message": ""}
+    response = client.post("/api/chat", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert "response" in data
+    assert len(data["suggestedFollowups"]) > 0
+
+
+def test_onboarding_nonexistent_user():
+    """Test onboarding with non-existent user returns 404."""
+    payload = {
+        "name": "Nobody",
+        "location": "Nowhere",
+        "preferences": {
+            "transportMode": "car_petrol",
+            "dailyCommute": 10.0,
+            "dietType": "mixed",
+            "homeSize": "small",
+            "electricityKwh": 100.0,
+            "waterLiters": 100.0,
+            "shoppingFrequency": "moderate"
+        }
+    }
+    response = client.post("/api/onboarding?email=nobody@ecogenie.app", json=payload)
+    assert response.status_code == 404
+

@@ -35,7 +35,7 @@
   /* Text */
   --text-primary: #f8fafc;
   --text-secondary: #94a3b8;
-  --text-muted: #64748b;
+  --text-muted: #8b9dc3;
   --text-inverse: #0a0f1e;
 
   /* Status */
@@ -108,6 +108,37 @@
   --z-tooltip: 600;
 }
 
+/* ── Accessibility Utilities ── */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 16px;
+  z-index: 10000;
+  padding: 12px 24px;
+  background: var(--primary);
+  color: white;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  transition: top var(--transition-fast);
+}
+
+.skip-link:focus {
+  top: 16px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* ── CSS Reset ── */
 *, *::before, *::after {
   margin: 0;
@@ -168,6 +199,29 @@ button {
   font-family: inherit;
   font-size: inherit;
   color: inherit;
+}
+
+/* ── Focus Visible (Keyboard Navigation) ── */
+*:focus-visible {
+  outline: 2px solid var(--primary-light);
+  outline-offset: 2px;
+}
+
+button:focus-visible,
+.btn:focus-visible,
+.nav-item:focus-visible,
+.bottom-nav-item:focus-visible,
+.option-card:focus-visible,
+.scenario-card:focus-visible {
+  outline: 2px solid var(--primary-light);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--primary-glow);
+}
+
+.form-input:focus-visible {
+  outline: none;
+  border-color: var(--primary-light);
+  box-shadow: 0 0 0 3px var(--primary-glow);
 }
 
 input, textarea, select {
@@ -387,6 +441,23 @@ p {
   border-radius: var(--radius-full);
   min-width: 20px;
   text-align: center;
+}
+
+button.nav-item {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+}
+
+button.bottom-nav-item {
+  background: none;
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
 }
 
 .sidebar-footer {
@@ -3142,3 +3213,42 @@ select.form-input option {
   body { background: white; color: black; }
   .glass-card { border: 1px solid #ccc; background: white; }
 }
+
+/* ── Reduced Motion Preference ── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .glass-card:hover {
+    transform: none;
+  }
+
+  .page-enter {
+    animation: none;
+  }
+
+  .stepper-dot,
+  .progress-fill,
+  .nav-item::before {
+    transition: none;
+  }
+}
+
+/* ── High Contrast Preference ── */
+@media (prefers-contrast: high) {
+  :root {
+    --glass-border: rgba(255, 255, 255, 0.3);
+    --text-muted: #b0c4de;
+  }
+
+  .glass-card {
+    border-width: 2px;
+  }
+}
+

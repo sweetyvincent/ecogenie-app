@@ -1,3 +1,4 @@
+// @ts-check
 /* ============================================================
    EcoGenie — Main Application Controller
    SPA Router, State Management, Page Rendering, UI Systems
@@ -8,6 +9,16 @@ const App = (() => {
   let currentPage = '';
   let chatHistory = [];
   let dailyTasks = [];
+  const pageContainers = {};
+
+
+  /* ── HTML Sanitization ── */
+  function sanitizeHTML(str) {
+    if (typeof str !== 'string') return str;
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
 
   /* ── Default User Profile ── */
   function getDefaultProfile() {
@@ -136,7 +147,6 @@ const App = (() => {
     }
 
     currentPage = page;
-    app.innerHTML = '';
 
     // Update nav active state
     document.querySelectorAll('.nav-item, .bottom-nav-item').forEach(item => {
@@ -147,6 +157,11 @@ const App = (() => {
     if (['landing', 'login', 'register'].includes(page)) {
       document.body.classList.add(page === 'landing' ? 'landing-active' : 'auth-active');
     }
+
+    // Hide all cached page containers
+    Object.values(pageContainers).forEach(c => {
+      c.style.display = 'none';
+    });
 
     const pageRenderers = {
       landing: renderLanding,
@@ -165,13 +180,51 @@ const App = (() => {
 
     const renderer = pageRenderers[page];
     if (renderer) {
-      renderer(app);
+      let container = pageContainers[page];
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'page-container-' + page;
+        container.style.width = '100%';
+        container.style.height = '100%';
+        app.appendChild(container);
+        pageContainers[page] = container;
+      }
+      renderer(container);
+      container.style.display = 'block';
     } else {
       app.innerHTML = '<div class="page-container"><div class="empty-state"><div class="empty-icon">🔍</div><h3>Page Not Found</h3><p>The page you\'re looking for doesn\'t exist.</p></div></div>';
     }
 
     // Scroll to top
     window.scrollTo(0, 0);
+
+    // Announce page change to screen readers
+    announcePageChange(page);
+  }
+
+  /* ── Screen Reader Announcements ── */
+  function announcePageChange(page) {
+    const pageNames = {
+      landing: 'Landing page',
+      login: 'Sign in page',
+      register: 'Create account page',
+      onboarding: 'Onboarding wizard',
+      dashboard: 'Dashboard',
+      analytics: 'Analytics and charts',
+      chat: 'CarbonGPT AI Coach',
+      simulator: 'What-if simulator',
+      challenges: 'Challenges',
+      community: 'Community',
+      rewards: 'Rewards',
+      settings: 'Settings'
+    };
+    const announcement = document.createElement('div');
+    announcement.setAttribute('role', 'status');
+    announcement.setAttribute('aria-live', 'polite');
+    announcement.className = 'sr-only';
+    announcement.textContent = `Navigated to ${pageNames[page] || page}`;
+    document.body.appendChild(announcement);
+    setTimeout(() => announcement.remove(), 1000);
   }
 
   /* ═══════════════════════════════
@@ -337,30 +390,51 @@ const App = (() => {
         ctx.fill();
       });
 
-      // Draw connections
-      particles.forEach((a, i) => {
-        particles.slice(i + 1).forEach(b => {
-          const dx = a.x - b.x;
-          const dy = a.y - b.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 150) {
-            ctx.beginPath();
-            ctx.moveTo(a.x, a.y);
-            ctx.lineTo(b.x, b.y);
-            ctx.strokeStyle = `rgba(13, 148, 136, ${0.1 * (1 - dist / 150)})`;
-            ctx.lineWidth = 0.5;
-            ctx.stroke();
+      // Draw connections using spatial grid for O(n) performance
+      const cellSize = 150;
+      const grid = {};
+      particles.forEach(p => {
+        const key = `${Math.floor(p.x / cellSize)},${Math.floor(p.y / cellSize)}`;
+        if (!grid[key]) grid[key] = [];
+        grid[key].push(p);
+      });
+
+      particles.forEach(a => {
+        const cx = Math.floor(a.x / cellSize);
+        const cy = Math.floor(a.y / cellSize);
+        for (let dx = -1; dx <= 1; dx++) {
+          for (let dy = -1; dy <= 1; dy++) {
+            const neighbors = grid[`${cx + dx},${cy + dy}`];
+            if (!neighbors) continue;
+            neighbors.forEach(b => {
+              if (b === a) return;
+              const distX = a.x - b.x;
+              const distY = a.y - b.y;
+              const dist = Math.sqrt(distX * distX + distY * distY);
+              if (dist < 150) {
+                ctx.beginPath();
+                ctx.moveTo(a.x, a.y);
+                ctx.lineTo(b.x, b.y);
+                ctx.strokeStyle = `rgba(13, 148, 136, ${0.1 * (1 - dist / 150)})`;
+                ctx.lineWidth = 0.5;
+                ctx.stroke();
+              }
+            });
           }
-        });
+        }
       });
 
       requestAnimationFrame(animate);
     }
 
     animate();
+    let resizeTimeout;
     window.addEventListener('resize', () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }, 150);
     });
   }
 
@@ -380,11 +454,11 @@ const App = (() => {
           </div>
           <div class="divider">or</div>
           <div class="form-group">
-            <label class="form-label">Email</label>
+            <label class="form-label" for="login-email">Email</label>
             <input type="email" class="form-input" id="login-email" placeholder="your@email.com" value="demo@ecogenie.app">
           </div>
           <div class="form-group">
-            <label class="form-label">Password</label>
+            <label class="form-label" for="login-password">Password</label>
             <input type="password" class="form-input" id="login-password" placeholder="••••••••" value="demo123">
           </div>
           <button class="btn btn-primary btn-block btn-lg" onclick="App.handleLogin()">Sign In</button>
@@ -412,15 +486,15 @@ const App = (() => {
           </div>
           <div class="divider">or</div>
           <div class="form-group">
-            <label class="form-label">Full Name</label>
+            <label class="form-label" for="reg-name">Full Name</label>
             <input type="text" class="form-input" id="reg-name" placeholder="Your name">
           </div>
           <div class="form-group">
-            <label class="form-label">Email</label>
+            <label class="form-label" for="reg-email">Email</label>
             <input type="email" class="form-input" id="reg-email" placeholder="your@email.com">
           </div>
           <div class="form-group">
-            <label class="form-label">Password</label>
+            <label class="form-label" for="reg-password">Password</label>
             <input type="password" class="form-input" id="reg-password" placeholder="Create a password">
           </div>
           <button class="btn btn-primary btn-block btn-lg" onclick="App.handleRegister()">Create Account</button>
@@ -473,11 +547,11 @@ const App = (() => {
         description: 'Tell us a bit about yourself to personalize your experience.',
         content: `
           <div class="form-group">
-            <label class="form-label">Your Name</label>
+            <label class="form-label" for="ob-name">Your Name</label>
             <input type="text" class="form-input" id="ob-name" placeholder="Enter your name" value="${profile.name || ''}">
           </div>
           <div class="form-group">
-            <label class="form-label">Where are you located?</label>
+            <label class="form-label" for="ob-location">Where are you located?</label>
             <select class="form-input" id="ob-location">
               <option value="global">Global Average</option>
               <option value="us">United States</option>
@@ -494,14 +568,14 @@ const App = (() => {
         content: `
           <div class="option-grid" id="transport-options">
             ${['🚗 Car (Petrol)', '🚗 Car (Diesel)', '⚡ Electric Car', '🚌 Bus', '🚆 Train', '🚇 Metro', '🚲 Bicycle', '🚶 Walking', '🏍️ Motorcycle'].map((opt, i) =>
-              `<div class="option-card" data-value="${['car_petrol','car_diesel','car_electric','bus','train','metro','bicycle','walking','motorcycle'][i]}" onclick="App.selectOption(this, 'transport-options')">
+              `<div class="option-card" tabindex="0" data-value="${['car_petrol','car_diesel','car_electric','bus','train','metro','bicycle','walking','motorcycle'][i]}" onclick="App.selectOption(this, 'transport-options')">
                 <div class="option-icon">${opt.split(' ')[0]}</div>
                 <div class="option-label">${opt.split(' ').slice(1).join(' ')}</div>
               </div>`
             ).join('')}
           </div>
           <div class="form-group mt-lg">
-            <label class="form-label">Daily commute distance (km)</label>
+            <label class="form-label" for="ob-commute">Daily commute distance (km)</label>
             <input type="number" class="form-input" id="ob-commute" placeholder="e.g., 15" value="10">
           </div>
         `
@@ -511,18 +585,18 @@ const App = (() => {
         description: 'Let\'s understand your home energy usage.',
         content: `
           <div class="form-group">
-            <label class="form-label">Daily electricity usage (kWh)</label>
+            <label class="form-label" for="ob-electricity">Daily electricity usage (kWh)</label>
             <input type="number" class="form-input" id="ob-electricity" placeholder="e.g., 10" value="10">
             <div class="form-helper">Average household: 8-12 kWh/day</div>
           </div>
           <div class="form-group">
-            <label class="form-label">Daily water usage (liters)</label>
+            <label class="form-label" for="ob-water">Daily water usage (liters)</label>
             <input type="number" class="form-input" id="ob-water" placeholder="e.g., 150" value="150">
             <div class="form-helper">Average person: 100-200 liters/day</div>
           </div>
           <div class="option-grid" id="energy-source">
             ${['☀️ Solar', '💨 Wind', '🔌 Grid (Mixed)', '🏭 Coal', '⚛️ Nuclear'].map((opt, i) =>
-              `<div class="option-card ${i === 2 ? 'selected' : ''}" data-value="${['solar','wind','perKwh','coal','nuclear'][i]}" onclick="App.selectOption(this, 'energy-source')">
+              `<div class="option-card ${i === 2 ? 'selected' : ''}" tabindex="0" data-value="${['solar','wind','perKwh','coal','nuclear'][i]}" onclick="App.selectOption(this, 'energy-source')">
                 <div class="option-icon">${opt.split(' ')[0]}</div>
                 <div class="option-label">${opt.split(' ').slice(1).join(' ')}</div>
               </div>`
@@ -536,7 +610,7 @@ const App = (() => {
         content: `
           <div class="option-grid" id="diet-options">
             ${['🥩 Meat Heavy', '🍖 Regular Meat', '🍗 Occasional Meat', '🐟 Pescatarian', '🥗 Vegetarian', '🌱 Vegan'].map((opt, i) =>
-              `<div class="option-card" data-value="${['meat_heavy','regular','occasional','pescatarian','vegetarian','vegan'][i]}" onclick="App.selectOption(this, 'diet-options')">
+              `<div class="option-card" tabindex="0" data-value="${['meat_heavy','regular','occasional','pescatarian','vegetarian','vegan'][i]}" onclick="App.selectOption(this, 'diet-options')">
                 <div class="option-icon">${opt.split(' ')[0]}</div>
                 <div class="option-label">${opt.split(' ').slice(1).join(' ')}</div>
               </div>`
@@ -550,14 +624,14 @@ const App = (() => {
         content: `
           <div class="option-grid" id="shopping-options">
             ${['🛍️ Frequent Shopper', '🛒 Moderate', '♻️ Minimal/Secondhand', '📦 Online Only'].map((opt, i) =>
-              `<div class="option-card" data-value="${['frequent','moderate','minimal','online'][i]}" onclick="App.selectOption(this, 'shopping-options')">
+              `<div class="option-card" tabindex="0" data-value="${['frequent','moderate','minimal','online'][i]}" onclick="App.selectOption(this, 'shopping-options')">
                 <div class="option-icon">${opt.split(' ')[0]}</div>
                 <div class="option-label">${opt.split(' ').slice(1).join(' ')}</div>
               </div>`
             ).join('')}
           </div>
           <div class="form-group mt-lg">
-            <label class="form-label">Waste management</label>
+            <label class="form-label" for="ob-waste">Waste management</label>
             <select class="form-input" id="ob-waste">
               <option value="landfill">Mostly landfill</option>
               <option value="recycled">I recycle regularly</option>
@@ -693,7 +767,7 @@ const App = (() => {
     app.innerHTML = `
       <div class="page-container page-enter">
         <div class="page-header">
-          <h1>Welcome back, ${profile.name || 'Explorer'}! 👋</h1>
+          <h1>Welcome back, ${sanitizeHTML(profile.name) || 'Explorer'}! 👋</h1>
           <p>Here's your sustainability overview for today</p>
         </div>
 
@@ -859,6 +933,38 @@ const App = (() => {
     }
   }
 
+  async function syncRecordsWithBackend(records = []) {
+    if (!profile.isLoggedIn || !profile.email) return;
+    const recordsToSync = records.length ? records : profile.history;
+    if (!recordsToSync.length) return;
+
+    try {
+      const emailParam = encodeURIComponent(profile.email);
+      const url = `http://localhost:8000/api/carbon/records?email=${emailParam}`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(recordsToSync.map(r => ({
+          category: r.category,
+          activity: r.activity,
+          emission_kg: r.emission_kg,
+          date: r.date || new Date().toISOString().split('T')[0],
+          notes: r.notes || '',
+          source: r.source || 'manual'
+        })))
+      });
+      if (response.ok) {
+        console.log('Successfully synced carbon records with the backend.');
+      } else {
+        console.warn('Backend sync failed, status code: ' + response.status);
+      }
+    } catch (e) {
+      console.warn('Offline: Backend sync failed, saved locally.', e);
+    }
+  }
+
   function quickLog(category) {
     const modals = {
       transport: {
@@ -886,9 +992,22 @@ const App = (() => {
           const mode = document.getElementById('ql-mode').value;
           const dist = parseFloat(document.getElementById('ql-distance').value) || 0;
           const co2 = CarbonCalculator.calculateTransport(mode, dist);
+
+          const newRecord = {
+            category: 'transport',
+            activity: `Commute: ${dist} km by ${mode.replace('_', ' ')}`,
+            emission_kg: co2,
+            date: new Date().toISOString().split('T')[0],
+            notes: `Distance: ${dist} km`,
+            source: 'manual'
+          };
+          profile.history.push(newRecord);
+          saveProfile();
+          syncRecordsWithBackend([newRecord]);
+
           Gamification.logActivity(mode);
-          showToast(`Logged: ${co2.toFixed(2)} kg CO₂ for ${dist} km by ${mode.replace('_', ' ')}`, 'success', 'Trip Logged');
-          closeModal();
+          App.showToast(`Logged: ${co2.toFixed(2)} kg CO₂ for ${dist} km by ${mode.replace('_', ' ')}`, 'success', 'Trip Logged');
+          App.closeModal();
         }
       },
       food: {
@@ -916,9 +1035,22 @@ const App = (() => {
           const food = document.getElementById('ql-food').value;
           const kg = parseFloat(document.getElementById('ql-weight').value) || 0;
           const co2 = CarbonCalculator.calculateFood([{ type: food, kg }]);
+
+          const newRecord = {
+            category: 'food',
+            activity: `Log meal: ${kg} kg of ${food}`,
+            emission_kg: co2,
+            date: new Date().toISOString().split('T')[0],
+            notes: `Weight: ${kg} kg`,
+            source: 'manual'
+          };
+          profile.history.push(newRecord);
+          saveProfile();
+          syncRecordsWithBackend([newRecord]);
+
           Gamification.logActivity(food);
-          showToast(`Logged: ${co2.toFixed(2)} kg CO₂ for ${kg} kg of ${food}`, 'success', 'Meal Logged');
-          closeModal();
+          App.showToast(`Logged: ${co2.toFixed(2)} kg CO₂ for ${kg} kg of ${food}`, 'success', 'Meal Logged');
+          App.closeModal();
         }
       },
       energy: {
@@ -932,9 +1064,22 @@ const App = (() => {
         action: () => {
           const kwh = parseFloat(document.getElementById('ql-kwh').value) || 0;
           const co2 = CarbonCalculator.calculateElectricity(kwh);
+
+          const newRecord = {
+            category: 'energy',
+            activity: `Log energy usage: ${kwh} kWh`,
+            emission_kg: co2,
+            date: new Date().toISOString().split('T')[0],
+            notes: `Usage: ${kwh} kWh`,
+            source: 'manual'
+          };
+          profile.history.push(newRecord);
+          saveProfile();
+          syncRecordsWithBackend([newRecord]);
+
           Gamification.logActivity('energy');
-          showToast(`Logged: ${co2.toFixed(2)} kg CO₂ for ${kwh} kWh`, 'success', 'Energy Logged');
-          closeModal();
+          App.showToast(`Logged: ${co2.toFixed(2)} kg CO₂ for ${kwh} kWh`, 'success', 'Energy Logged');
+          App.closeModal();
         }
       }
     };
@@ -954,6 +1099,67 @@ const App = (() => {
     const emissions = profile.emissions || calculateUserEmissions();
     const comparison = CarbonCalculator.compareToAverage(emissions.annual);
     const sampleData = CarbonCalculator.generateSampleData();
+
+    // Generate accessible tables for screen readers
+    const categoryTable = `
+      <table class="sr-only">
+        <caption>Carbon Emissions by Category</caption>
+        <thead>
+          <tr>
+            <th scope="col">Category</th>
+            <th scope="col">Emissions (kg CO₂)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${sampleData.categoryBreakdown.map(cat => `
+            <tr>
+              <td>${cat.label}</td>
+              <td>${cat.value.toFixed(1)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+
+    const monthlyTable = `
+      <table class="sr-only">
+        <caption>Monthly Carbon Emissions Comparison</caption>
+        <thead>
+          <tr>
+            <th scope="col">Month</th>
+            <th scope="col">Emissions (kg CO₂)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${sampleData.monthlyData.slice(0, 6).map(m => `
+            <tr>
+              <td>${m.label}</td>
+              <td>${m.value.toFixed(1)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+
+    const trendTable = `
+      <table class="sr-only">
+        <caption>30-Day Carbon Emissions Trend</caption>
+        <thead>
+          <tr>
+            <th scope="col">Day</th>
+            <th scope="col">Emissions (kg CO₂)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${sampleData.trendData.map(t => `
+            <tr>
+              <td>${t.label}</td>
+              <td>${t.value.toFixed(1)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
 
     app.innerHTML = `
       <div class="page-container page-enter">
@@ -989,12 +1195,14 @@ const App = (() => {
               <div class="card-title">Monthly Comparison</div>
             </div>
             <div class="chart-container" id="analytics-bar" style="height:280px;"></div>
+            ${monthlyTable}
           </div>
           <div class="glass-card no-hover">
             <div class="card-header">
               <div class="card-title">30-Day Trend</div>
             </div>
             <div class="chart-container" id="analytics-line" style="height:280px;"></div>
+            ${trendTable}
           </div>
         </div>
 
@@ -1003,6 +1211,7 @@ const App = (() => {
             <div class="card-title">Category Deep Dive</div>
           </div>
           <div class="chart-container" id="category-bars"></div>
+          ${categoryTable}
         </div>
       </div>
     `;
@@ -1101,7 +1310,7 @@ const App = (() => {
     // Simulate response delay
     setTimeout(() => {
       typing.remove();
-      const response = AICoach.processChat(message);
+      const response = AICoach.processChat(message, profile);
       chatHistory.push({ role: 'bot', text: response.response });
       Gamification.trackChat();
       renderChatMessages();
@@ -1447,9 +1656,21 @@ const App = (() => {
     const overlay = document.querySelector('.sidebar-overlay');
     if (overlay) overlay.addEventListener('click', toggleMenu);
 
+    // Accessibility keyboard support
+    document.addEventListener('keydown', (e) => {
+      if (e.key === ' ' || e.key === 'Enter') {
+        const target = /** @type {HTMLElement} */ (e.target);
+        if (target && (target.classList.contains('option-card') || target.classList.contains('scenario-card') || target.classList.contains('post-action') || target.classList.contains('tab') || target.classList.contains('nav-item') || target.classList.contains('bottom-nav-item'))) {
+          e.preventDefault();
+          target.click();
+        }
+      }
+    });
+
     // Initialize route
     updateSidebarUser();
     handleRoute();
+    syncRecordsWithBackend();
   }
 
   return {
@@ -1481,4 +1702,10 @@ const App = (() => {
 })();
 
 // Boot the app
-document.addEventListener('DOMContentLoaded', App.init);
+if (typeof document !== 'undefined') {
+  document.addEventListener('DOMContentLoaded', App.init);
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = App;
+}

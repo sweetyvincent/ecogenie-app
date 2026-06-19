@@ -7,20 +7,20 @@ from pydantic import BaseModel, EmailStr, Field
 # ── User Schemas ──
 class UserBase(BaseModel):
   email: EmailStr
-  name: str
-  city: Optional[str] = None
-  age: Optional[int] = None
-  occupation: Optional[str] = None
-  lifestyle: Optional[str] = None
+  name: str = Field(..., max_length=128)
+  city: Optional[str] = Field(None, max_length=128)
+  age: Optional[int] = Field(None, ge=0, le=120)
+  occupation: Optional[str] = Field(None, max_length=128)
+  lifestyle: Optional[str] = Field(None, max_length=128)
 
 
 class UserCreate(UserBase):
-  password: str
+  password: str = Field(..., min_length=6, max_length=128)
 
 
 class UserLogin(BaseModel):
   email: EmailStr
-  password: str
+  password: str = Field(..., max_length=128)
 
 
 class UserResponse(UserBase):
@@ -34,30 +34,39 @@ class UserResponse(UserBase):
     from_attributes = True
 
 
+class Token(BaseModel):
+  access_token: str
+  token_type: str = "bearer"
+
+
+class TokenData(BaseModel):
+  email: Optional[str] = None
+
+
 class OnboardingPreferences(BaseModel):
-  transportMode: str
-  dailyCommute: float
-  dietType: str
-  homeSize: str
-  electricityKwh: float
-  waterLiters: float
-  shoppingFrequency: str
+  transportMode: str = Field(..., max_length=64)
+  dailyCommute: float = Field(..., ge=0, le=1000)
+  dietType: str = Field(..., max_length=64)
+  homeSize: str = Field(..., max_length=64)
+  electricityKwh: float = Field(..., ge=0, le=100000)
+  waterLiters: float = Field(..., ge=0, le=100000)
+  shoppingFrequency: str = Field(..., max_length=64)
 
 
 class OnboardingRequest(BaseModel):
-  name: str
-  location: str
+  name: str = Field(..., max_length=128)
+  location: str = Field(..., max_length=128)
   preferences: OnboardingPreferences
 
 
 # ── Carbon Record Schemas ──
 class CarbonRecordBase(BaseModel):
-  category: str
-  activity: str
-  emission_kg: float
+  category: str = Field(..., max_length=64)
+  activity: str = Field(..., max_length=256)
+  emission_kg: float = Field(..., ge=0)
   date: Optional[datetime.date] = None
-  notes: Optional[str] = None
-  source: Optional[str] = "manual"
+  notes: Optional[str] = Field(None, max_length=512)
+  source: Optional[str] = Field("manual", max_length=64)
 
 
 class CarbonRecordCreate(CarbonRecordBase):
@@ -158,7 +167,7 @@ class EmissionPredictionResponse(BaseModel):
 
 # ── CarbonGPT Chat Schemas ──
 class ChatRequest(BaseModel):
-  message: str
+  message: str = Field(..., max_length=1000)
   context: Optional[dict] = {}
 
 

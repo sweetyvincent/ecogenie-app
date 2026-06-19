@@ -1,3 +1,4 @@
+// @ts-check
 /* ============================================================
    EcoGenie — Carbon Reduction Simulator
    Interactive what-if scenario comparisons
@@ -194,7 +195,7 @@ const Simulator = (() => {
     const { scenario, carbonSaved, moneySaved, treesEquivalent, percentReduction } = result;
 
     return `
-      <div class="glass-card scenario-card" data-scenario="${scenarioId}">
+      <div class="glass-card scenario-card" tabindex="0" data-scenario="${scenarioId}">
         <div class="scenario-header">
           <span class="scenario-icon">${scenario.icon}</span>
           <div>
@@ -236,12 +237,49 @@ const Simulator = (() => {
     `;
   }
 
+  /**
+   * Public API for the Carbon Reduction Simulator.
+   */
   return {
+    /**
+     * Simulates emissions savings for a pre-built scenario.
+     * @param {string} scenarioId - The ID of the scenario.
+     * @returns {Object|null} Simulated results including carbon/money savings.
+     */
     simulate,
+    /**
+     * Runs a custom what-if comparison between a current and alternative activity.
+     * @param {Object} currentActivity - The current baseline activity.
+     * @param {Object} alternativeActivity - The proposed alternative activity.
+     * @returns {Object} Custom simulation results.
+     */
     customSimulate,
+    /**
+     * Retrieves all pre-built scenarios.
+     * @returns {Array<Object>} List of scenarios.
+     */
     getAllScenarios,
+    /**
+     * Retrieves a single scenario by its ID.
+     * @param {string} id - The scenario ID.
+     * @returns {Object|undefined} The scenario object.
+     */
     getScenario,
+    /**
+     * Renders a scenario comparison card as HTML.
+     * @param {string} scenarioId - The scenario ID.
+     * @returns {string} HTML representation of the scenario card.
+     */
     renderScenarioCard,
+    /**
+     * Raw array of pre-built scenarios.
+     * @type {Array<Object>}
+     */
     scenarios
   };
 })();
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = Simulator;
+}
+

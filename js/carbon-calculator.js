@@ -1,3 +1,4 @@
+// @ts-check
 /* ============================================================
    EcoGenie — Carbon Calculator Engine
    Comprehensive emission calculation functions
@@ -279,19 +280,90 @@ const CarbonCalculator = (() => {
     };
   }
 
+  /**
+   * Public API for the Carbon Calculator Engine.
+   */
   return {
+    /**
+     * Calculates carbon emissions for transport mode.
+     * @param {string} mode - Transport mode type.
+     * @param {number} distanceKm - Distance traveled in km.
+     * @returns {number} Emissions in kg CO2.
+     */
     calculateTransport,
+    /**
+     * Calculates electricity emissions.
+     * @param {number} kwhUsed - Power usage in kWh.
+     * @param {string} [source='perKwh'] - Energy source type.
+     * @returns {number} Emissions in kg CO2.
+     */
     calculateElectricity,
+    /**
+     * Calculates water consumption emissions.
+     * @param {number} liters - Liters of water used.
+     * @param {boolean} [isHot=false] - Whether hot water was used.
+     * @returns {number} Emissions in kg CO2.
+     */
     calculateWater,
+    /**
+     * Calculates food consumption emissions.
+     * @param {Array<Object>} foodItems - Array of food item inputs.
+     * @returns {number} Emissions in kg CO2.
+     */
     calculateFood,
+    /**
+     * Calculates shopping emissions.
+     * @param {Array<Object>} items - Array of shopping item inputs.
+     * @returns {number} Emissions in kg CO2.
+     */
     calculateShopping,
+    /**
+     * Calculates waste management emissions.
+     * @param {number} kg - Weight in kg.
+     * @param {string} method - Disposal method ('landfill' or 'recycled').
+     * @returns {number} Emissions in kg CO2.
+     */
     calculateWaste,
+    /**
+     * Calculates home heating/utilities emissions.
+     * @param {Object} input - Home utility inputs.
+     * @returns {number} Emissions in kg CO2.
+     */
     calculateHome,
+    /**
+     * Calculates total daily/weekly/annual carbon footprint.
+     * @param {Object} inputs - User input breakdown.
+     * @returns {Object} Comprehensive emissions summary.
+     */
     calculateTotal,
+    /**
+     * Computes the eco score rating bracket.
+     * @param {number} annualCo2 - Annual emissions in kg CO2.
+     * @returns {Object} Eco rating object.
+     */
     getEcoScore,
+    /**
+     * Compares user emissions to regional averages.
+     * @param {number} annualCo2 - Annual emissions in kg CO2.
+     * @returns {Object} Comparison metrics.
+     */
     compareToAverage,
+    /**
+     * Computes annual tree offset equivalent.
+     * @param {number} co2Saved - CO2 saved in kg.
+     * @returns {number} Trees equivalent.
+     */
     treesEquivalent,
+    /**
+     * Estimates cost savings for carbon-reducing actions.
+     * @param {Object} profile - User commuting/utility profile.
+     * @returns {Object} Calculated money savings.
+     */
     moneyEstimate,
+    /**
+     * Generates sample mock data for graphs.
+     * @returns {Array<Object>} Sample dataset.
+     */
     generateSampleData
   };
 })();

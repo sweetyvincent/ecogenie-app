@@ -1,3 +1,4 @@
+// @ts-check
 /* ============================================================
    EcoGenie — Gamification System
    Points, levels, streaks, achievements, XP, leaderboard
@@ -119,7 +120,7 @@ const Gamification = (() => {
     if (lastLog) {
       const lastDate = new Date(lastLog);
       const todayDate = new Date(today);
-      const diffDays = Math.floor((todayDate - lastDate) / (1000 * 60 * 60 * 24));
+      const diffDays = Math.round((todayDate - lastDate) / (1000 * 60 * 60 * 24));
 
       if (diffDays === 1) {
         state.streak += 1; // Continue streak
@@ -287,6 +288,12 @@ const Gamification = (() => {
     saveState(state);
   }
 
+  /* ── Set State ── */
+  function setState(newState) {
+    state = { ...state, ...newState };
+    saveState(state);
+  }
+
   /* ── Render Level Badge ── */
   function renderLevelBadge() {
     const progress = getLevelProgress(state.xp);
@@ -305,24 +312,109 @@ const Gamification = (() => {
     `;
   }
 
+  /**
+   * Public API for the Gamification System.
+   */
   return {
+    /**
+     * Loads the gamification state from localStorage.
+     * @returns {Object} Loaded state.
+     */
     loadState,
+    /**
+     * Adds points and XP to the user state, handling level ups.
+     * @param {number} amount - XP/Points to add.
+     * @param {string} [reason=''] - Logged reason.
+     * @returns {Object} Updated level/points result.
+     */
     addPoints,
+    /**
+     * Updates daily login streak information.
+     * @returns {number} The current streak count.
+     */
     updateStreak,
+    /**
+     * Logs a carbon action, awarding XP and checking achievements.
+     * @param {string} [type='general'] - Type of activity logged.
+     * @returns {Object} Points addition result.
+     */
     logActivity,
+    /**
+     * Scans and unlocks newly completed achievements.
+     * @returns {Array<Object>} List of newly unlocked achievement badges.
+     */
     checkAchievements,
+    /**
+     * Tracks a chat with the AI coach.
+     */
     trackChat,
+    /**
+     * Tracks sharing an activity.
+     */
     trackShare,
+    /**
+     * Tracks running a simulation.
+     */
     trackSimulation,
+    /**
+     * Tracks viewing the analytics tab.
+     */
     trackAnalyticsView,
+    /**
+     * Tracks completing a challenge.
+     */
     trackChallengeComplete,
+    /**
+     * Renders achievements HTML grid.
+     * @returns {string} Achievements HTML.
+     */
     renderAchievements,
+    /**
+     * Renders leaderboard HTML table.
+     * @returns {string} Leaderboard HTML.
+     */
     renderLeaderboard,
+    /**
+     * Renders user level badge and progress bar.
+     * @returns {string} Level badge HTML.
+     */
     renderLevelBadge,
+    /**
+     * Calculates the level associated with given XP.
+     * @param {number} xp - XP points.
+     * @returns {number} The computed level (1-50).
+     */
     getLevel,
+    /**
+     * Gets progress stats to reach the next level.
+     * @param {number} xp - Current XP.
+     * @returns {Object} Progress statistics.
+     */
     getLevelProgress,
+    /**
+     * Returns the title corresponding to user level.
+     * @param {number} level - User level.
+     * @returns {string} Level title.
+     */
     getLevelTitle,
+    /**
+     * Returns a copy of the current state.
+     * @returns {Object} State copy.
+     */
     getState,
+    /**
+     * Sets/updates the gamification state.
+     * @param {Object} newState - New state fields to merge.
+     */
+    setState,
+    /**
+     * Resets the gamification state to default.
+     */
     reset
   };
 })();
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = Gamification;
+}
+

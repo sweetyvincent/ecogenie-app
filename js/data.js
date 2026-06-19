@@ -1,3 +1,4 @@
+// @ts-check
 /* ============================================================
    EcoGenie — Data Module
    Comprehensive data for carbon calculations, gamification,

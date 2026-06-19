@@ -6,8 +6,14 @@ DATABASE_URL = os.getenv(
     "DATABASE_URL", "postgresql://ecogenie:ecogenie_pass@localhost:5432/ecogenie_db"
 )
 
-# Connect to database. In production, we'd use connection pooling.
-engine = create_engine(DATABASE_URL)
+# Connect to database with connection pooling.
+engine = create_engine(
+    DATABASE_URL,
+    pool_size=5,
+    max_overflow=10,
+    pool_recycle=3600,
+    pool_pre_ping=True,
+)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

@@ -21,6 +21,7 @@ class User(Base):
 
   id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
   email = Column(String(255), unique=True, nullable=False, index=True)
+  hashed_password = Column(String(255), nullable=True)
   name = Column(String(150), nullable=False)
   avatar = Column(String(500))
   city = Column(String(100))

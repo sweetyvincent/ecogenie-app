@@ -1,3 +1,4 @@
+// @ts-check
 /* ============================================================
    EcoGenie — Custom SVG Chart Library
    Animated, responsive, tooltip-enabled SVG charts
@@ -770,3 +771,7 @@ const EcoCharts = (() => {
 
   return { DonutChart, BarChart, LineChart, ProgressRing, SparkLine, HorizontalBarChart, colors };
 })();
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = EcoCharts;
+}

@@ -1,10 +1,18 @@
 import datetime
+import os
 import random
+import time
 import uuid
+from collections import defaultdict
 from typing import Dict, List, Optional
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
+from starlette.middleware.base import BaseHTTPMiddleware
 
 # Import db modules
 from database import engine, get_db
@@ -21,10 +29,42 @@ from schemas import (
     RecommendationResponse,
     ScanBillResponse,
     ScanReceiptResponse,
+    Token,
+    TokenData,
     UserCreate,
     UserLogin,
     UserResponse,
+    CarbonRecordCreate,
+    CarbonRecordResponse,
 )
+
+
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    """Custom token-bucket rate limiter middleware to prevent DoS attacks on key endpoints."""
+    def __init__(self, app, limit: int = 100, window: int = 60):
+        super().__init__(app)
+        self.limit = limit
+        self.window = window
+        self.tokens = defaultdict(lambda: (float(limit), time.time()))
+
+    async def dispatch(self, request: Request, call_next):
+        client_ip = request.client.host if request.client else "unknown"
+        if request.url.path in ["/api/auth/register", "/api/auth/login", "/api/chat"]:
+            now = time.time()
+            tokens, last_update = self.tokens[client_ip]
+            elapsed = now - last_update
+            replenished = elapsed * (self.limit / self.window)
+            new_tokens = min(float(self.limit), tokens + replenished)
+            
+            if new_tokens < 1.0:
+                return Response(
+                    content='{"detail": "Too many requests. Please try again later."}',
+                    status_code=429,
+                    media_type="application/json"
+                )
+            self.tokens[client_ip] = (new_tokens - 1.0, now)
+        return await call_next(request)
+
 
 # Initialize FastAPI App
 app = FastAPI(
@@ -36,11 +76,79 @@ app = FastAPI(
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # For demo / hackathon purposes
+    allow_origins=os.getenv("CORS_ORIGINS", "http://localhost:8080,http://localhost:3000").split(","),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(RateLimitMiddleware, limit=100, window=60)
+
+
+class Cache:
+    """In-memory cache with TTL expiration."""
+    def __init__(self, ttl_seconds: int = 300):
+        self.store = {}
+        self.ttl = ttl_seconds
+
+    def get(self, key: str):
+        if key in self.store:
+            val, expiry = self.store[key]
+            if time.time() < expiry:
+                return val
+            else:
+                del self.store[key]
+        return None
+
+    def set(self, key: str, val):
+        self.store[key] = (val, time.time() + self.ttl)
+
+
+predictions_cache = Cache(ttl_seconds=600)  # 10 minutes cache
+recommendations_cache = Cache(ttl_seconds=300)  # 5 minutes cache
+
+
+# ── Auth Configuration ──
+SECRET_KEY = os.getenv("JWT_SECRET", "ecogenie-dev-secret-change-in-production")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+  return pwd_context.verify(plain_password, hashed_password)
+
+
+def get_password_hash(password: str) -> str:
+  return pwd_context.hash(password)
+
+
+def create_access_token(data: dict) -> str:
+  to_encode = data.copy()
+  expire = datetime.datetime.utcnow() + datetime.timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+  to_encode.update({"exp": expire})
+  return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+  """Dependency to get the current authenticated user from JWT token."""
+  if token is None:
+    return None
+  try:
+    payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    email: str = payload.get("sub")
+    if email is None:
+      return None
+  except JWTError:
+    return None
+  try:
+    user = db.query(User).filter(User.email == email).first()
+    return user
+  except Exception:
+    return in_memory_users.get(email)
+
 
 # Create Database tables automatically on startup
 try:
@@ -50,6 +158,7 @@ except Exception as e:
 
 # Mock in-memory DB for fallback when PostgreSQL is unavailable
 in_memory_users: Dict[str, dict] = {}
+in_memory_records: Dict[str, list] = defaultdict(list)
 
 
 # Health Check
@@ -61,7 +170,8 @@ def health_check():
 # ── Auth Endpoints ──
 @app.post("/api/auth/register", response_model=UserResponse)
 def register(user_data: UserCreate, db: Session = Depends(get_db)):
-  # Check if email exists
+  """Register a new user with hashed password."""
+  hashed_pw = get_password_hash(user_data.password)
   try:
     db_user = db.query(User).filter(User.email == user_data.email).first()
     if db_user:
@@ -70,6 +180,7 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
     new_user = User(
         email=user_data.email,
         name=user_data.name,
+        hashed_password=hashed_pw,
         total_points=0,
         subscription_tier="free",
         onboarding_completed=False,
@@ -78,8 +189,10 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
     return new_user
-  except Exception:
-    # Memory fallback
+  except HTTPException:
+    raise
+  except SQLAlchemyError:
+    # Memory fallback when DB is unavailable
     if user_data.email in in_memory_users:
       raise HTTPException(status_code=400, detail="Email already registered")
     user_id = uuid.uuid4()
@@ -96,23 +209,33 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
         "onboarding_completed": False,
         "created_at": datetime.datetime.utcnow(),
     }
-    in_memory_users[user_data.email] = new_user
+    in_memory_users[user_data.email] = {**new_user, "hashed_password": hashed_pw}
     return new_user
 
 
-@app.post("/api/auth/login", response_model=UserResponse)
+@app.post("/api/auth/login", response_model=Token)
 def login(user_data: UserLogin, db: Session = Depends(get_db)):
+  """Authenticate user and return JWT access token."""
   try:
     db_user = db.query(User).filter(User.email == user_data.email).first()
-    if not db_user:
-      raise HTTPException(status_code=400, detail="Invalid email or password")
-    return db_user
-  except Exception:
+    if not db_user or not db_user.hashed_password:
+      raise HTTPException(status_code=401, detail="Invalid email or password")
+    if not verify_password(user_data.password, db_user.hashed_password):
+      raise HTTPException(status_code=401, detail="Invalid email or password")
+    access_token = create_access_token(data={"sub": db_user.email})
+    return Token(access_token=access_token)
+  except HTTPException:
+    raise
+  except SQLAlchemyError:
     # Memory fallback
     user = in_memory_users.get(user_data.email)
     if not user:
-      raise HTTPException(status_code=400, detail="Invalid email or password")
-    return user
+      raise HTTPException(status_code=401, detail="Invalid email or password")
+    stored_hash = user.get("hashed_password", "")
+    if not stored_hash or not verify_password(user_data.password, stored_hash):
+      raise HTTPException(status_code=401, detail="Invalid email or password")
+    access_token = create_access_token(data={"sub": user_data.email})
+    return Token(access_token=access_token)
 
 
 # ── Dashboard & Profile ──
@@ -144,7 +267,7 @@ def onboarding(req: OnboardingRequest, email: str, db: Session = Depends(get_db)
     db.commit()
     db.refresh(user)
     return user
-  except Exception:
+  except SQLAlchemyError:
     user = in_memory_users.get(email)
     if not user:
       raise HTTPException(status_code=404, detail="User not found")
@@ -260,6 +383,9 @@ def calculate_footprint(req: CalculateCarbonRequest):
 # ── AI Coach & Recommendations ──
 @app.get("/api/recommendations", response_model=List[RecommendationResponse])
 def get_recommendations(email: str, db: Session = Depends(get_db)):
+  cached = recommendations_cache.get(email)
+  if cached is not None:
+    return cached
   # Simulated recommendations list
   mock_recs = [
       {
@@ -293,6 +419,7 @@ def get_recommendations(email: str, db: Session = Depends(get_db)):
           "created_at": datetime.datetime.utcnow(),
       },
   ]
+  recommendations_cache.set(email, mock_recs)
   return mock_recs
 
 
@@ -333,6 +460,9 @@ def scan_bill():
 # ── AI Behavioral Predictions ──
 @app.post("/api/predict-emissions", response_model=EmissionPredictionResponse)
 def predict_emissions():
+  cached = predictions_cache.get("global")
+  if cached is not None:
+    return cached
   today = datetime.date.today()
   forecast = []
 
@@ -349,7 +479,7 @@ def predict_emissions():
         )
     )
 
-  return EmissionPredictionResponse(
+  response = EmissionPredictionResponse(
       historical_avg_daily=12.4,
       predicted_next_month_total=341.2,
       trend="Decreasing",
@@ -358,6 +488,8 @@ def predict_emissions():
       ],
       forecast=forecast,
   )
+  predictions_cache.set("global", response)
+  return response
 
 
 # ── CarbonGPT AI Chatbot ──
@@ -402,6 +534,60 @@ def chat_sustainability_coach(req: ChatRequest):
     suggested = ["Home utility scanner", "What is my energy score?", "Renewable energy factors"]
 
   return ChatResponse(response=resp_text, suggestedFollowups=suggested)
+
+
+# ── Carbon Record Sync ──
+@app.get("/api/carbon/records", response_model=List[CarbonRecordResponse])
+def get_carbon_records(email: str, db: Session = Depends(get_db)):
+  try:
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+      raise HTTPException(status_code=404, detail="User not found")
+    records = db.query(CarbonRecord).filter(CarbonRecord.user_id == user.id).order_by(CarbonRecord.date.desc()).all()
+    return records
+  except SQLAlchemyError:
+    return in_memory_records.get(email, [])
+
+
+@app.post("/api/carbon/records", response_model=List[CarbonRecordResponse])
+def sync_carbon_records(email: str, req_records: List[CarbonRecordCreate], db: Session = Depends(get_db)):
+  try:
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+      raise HTTPException(status_code=404, detail="User not found")
+    
+    synced_records = []
+    for r in req_records:
+      new_rec = CarbonRecord(
+          user_id=user.id,
+          category=r.category,
+          activity=r.activity,
+          emission_kg=r.emission_kg,
+          date=r.date or datetime.date.today(),
+          notes=r.notes,
+          source=r.source or "manual",
+      )
+      db.add(new_rec)
+      synced_records.append(new_rec)
+    db.commit()
+    for r in synced_records:
+      db.refresh(r)
+    return db.query(CarbonRecord).filter(CarbonRecord.user_id == user.id).order_by(CarbonRecord.date.desc()).all()
+  except SQLAlchemyError:
+    for r in req_records:
+      mock_rec = {
+          "id": uuid.uuid4(),
+          "user_id": uuid.uuid4(),
+          "category": r.category,
+          "activity": r.activity,
+          "emission_kg": r.emission_kg,
+          "date": r.date or datetime.date.today(),
+          "notes": r.notes,
+          "source": r.source or "manual",
+          "created_at": datetime.datetime.utcnow(),
+      }
+      in_memory_records[email].append(mock_rec)
+    return in_memory_records[email]
 
 
 # Run Server locally (e.g. `python main.py` for testing)

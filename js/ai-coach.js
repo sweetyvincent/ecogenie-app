@@ -1,3 +1,4 @@
+// @ts-check
 /* ============================================================
    EcoGenie — AI Sustainability Coach (CarbonGPT)
    Keyword-based chat system with contextual responses
@@ -52,15 +53,59 @@ const AICoach = (() => {
   }
 
   /* ── Get Response ── */
-  function getResponse(topic) {
+  function getResponse(topic, userProfile = null) {
     const topicResponses = responses[topic] || responses.fallback;
-    return topicResponses[Math.floor(Math.random() * topicResponses.length)];
+    let baseResponse = topicResponses[Math.floor(Math.random() * topicResponses.length)];
+
+    if (userProfile && userProfile.preferences) {
+      const prefs = userProfile.preferences;
+      if (topic === 'transport' && prefs.transportMode && prefs.dailyCommute !== undefined) {
+        const factorMap = {
+          car_petrol: 0.21,
+          car_diesel: 0.17,
+          car_electric: 0.05,
+          bus: 0.089,
+          train: 0.041,
+          metro: 0.033,
+          motorcycle: 0.113,
+          bicycle: 0.0,
+          walking: 0.0
+        };
+        const factor = factorMap[prefs.transportMode] || 0.21;
+        const dailyEmissions = factor * prefs.dailyCommute;
+        const annualEmissions = dailyEmissions * 365;
+
+        let commuteTip = '';
+        if (prefs.transportMode.includes('car')) {
+          commuteTip = `Since you commute **${prefs.dailyCommute} km** by **${prefs.transportMode.replace('_', ' ')}**, this trip generates **${annualEmissions.toFixed(0)} kg CO₂** annually. Consider switching to metro or bike occasionally to save carbon!`;
+        } else if (prefs.transportMode === 'bicycle' || prefs.transportMode === 'walking') {
+          commuteTip = `Incredible! Since you commute **${prefs.dailyCommute} km** by **${prefs.transportMode}**, you generate **0 kg CO₂**! Keep walking/cycling and setting a wonderful example!`;
+        } else {
+          commuteTip = `Since you commute **${prefs.dailyCommute} km** via **${prefs.transportMode}**, your annual commute footprint is **${annualEmissions.toFixed(0)} kg CO₂**. Good job choosing public transit over personal petrol cars!`;
+        }
+        
+        baseResponse += `\n\n🎯 **Coach Personalized Insight:**\n${commuteTip}`;
+      } else if (topic === 'food' && prefs.dietType) {
+        const dietDescriptions = {
+          meat_heavy: "heavy meat consumption (which has the highest food carbon footprint)",
+          regular: "mixed diet with regular meat consumption",
+          occasional: "occasional meat consumption (a great step towards reducing emissions)",
+          pescatarian: "pescatarian diet (replacing red meat with fish)",
+          vegetarian: "vegetarian diet (fully meat-free, which reduces food emissions by up to 50%)",
+          vegan: "100% plant-based vegan diet (which has the absolute lowest carbon footprint!)"
+        };
+        const desc = dietDescriptions[prefs.dietType] || prefs.dietType;
+        baseResponse += `\n\n🎯 **Coach Personalized Insight:**\nYour current diet profile is **${desc}**. If you're looking to reduce your footprint further, try replacing dairy or high-impact cheese meals with plant-based alternatives!`;
+      }
+    }
+
+    return baseResponse;
   }
 
   /* ── Process Chat Message ── */
-  function processChat(message) {
+  function processChat(message, userProfile = null) {
     const topic = detectTopic(message);
-    const response = getResponse(topic);
+    const response = getResponse(topic, userProfile);
     return {
       topic,
       response,
@@ -354,16 +399,76 @@ const AICoach = (() => {
     return filtered[Math.floor(Math.random() * filtered.length)];
   }
 
+  /**
+   * Public API for the AI Sustainability Coach (CarbonGPT).
+   */
   return {
+    /**
+     * Processes a user chat message and returns a contextual response.
+     * @param {string} message - The user's input message.
+     * @returns {{topic: string, response: string, suggestedFollowups: string[]}} The coach's response.
+     */
     processChat,
+    /**
+     * Generates priority-sorted carbon reduction recommendations based on user emissions.
+     * @param {Object} userProfile - The user's preferences and profile.
+     * @param {Object} emissions - The calculated emissions breakdown.
+     * @returns {Array<Object>} List of recommendation objects.
+     */
     generateRecommendations,
+    /**
+     * Generates a list of 5 randomized daily tasks covering different categories.
+     * @param {Object} userProfile - The user's profile.
+     * @returns {Array<Object>} List of daily task objects.
+     */
     generateDailyTasks,
+    /**
+     * Selects a weekly challenge for the user.
+     * @param {Array<Object>} userHistory - The user's historical records.
+     * @returns {Object} Challenge object.
+     */
     generateWeeklyChallenge,
+    /**
+     * Simulates future emissions forecast points.
+     * @param {Array<number>} history - The user's monthly emissions history.
+     * @returns {Array<Object>} Forecast data points.
+     */
     predictFutureEmissions,
+    /**
+     * Detects wasteful user habits based on log activity.
+     * @param {Object} activities - User logged activities.
+     * @returns {Array<Object>} Detected wasteful habit objects.
+     */
     detectWastefulHabits,
+    /**
+     * Creates a milestones roadmap to reach target emissions reduction.
+     * @param {number} currentAnnual - Current annual emissions in kg CO2.
+     * @param {number} targetAnnual - Target annual emissions in kg CO2.
+     * @returns {Array<Object>} Milestone steps.
+     */
     generateSustainabilityRoadmap,
+    /**
+     * Retrieves a random tip, optionally filtered by category.
+     * @param {string|null} [category=null] - The tip category.
+     * @returns {Object} Tip object.
+     */
     getRandomTip,
+    /**
+     * Helper to detect the topic of a user message.
+     * @param {string} message - User message.
+     * @returns {string} Detected topic name.
+     */
     detectTopic,
+    /**
+     * Retrieves suggested follow-up questions for a topic.
+     * @param {string} topic - Topic name.
+     * @returns {Array<string>} List of follow-up questions.
+     */
     getSuggestedFollowups
   };
 })();
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = AICoach;
+}
+

@@ -1,3 +1,4 @@
+// @ts-check
 /* ============================================================
    EcoGenie — Community Module
    Social feed, groups, challenges, interactions
@@ -263,3 +264,7 @@ const Community = (() => {
     toggleChallenge
   };
 })();
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = Community;
+}
